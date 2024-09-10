@@ -25,6 +25,7 @@ func main() {
 	fmt.Println("Connected to MongoDB!")
 
 	InsertUser(client)
+	GetAllUsers(client)
 }
 
 func InsertUser(client *mongo.Client) {
@@ -40,4 +41,20 @@ func InsertUser(client *mongo.Client) {
 	}
 
 	fmt.Println("Inserted user with ID:", result.InsertedID)
+}
+
+func GetAllUsers(client *mongo.Client) {
+	collection := client.Database("golang").Collection("users")
+	cursor, err := collection.Find(context.TODO(), bson.D{})
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(context.TODO())
+	for cursor.Next(context.TODO()) {
+		var user bson.M
+		if err = cursor.Decode(&user); err != nil {
+			panic(err)
+		}
+		fmt.Printf("User: %+v\n", user["name"])
+	}
 }
