@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -24,11 +26,12 @@ func main() {
 
 	fmt.Println("Connected to MongoDB!")
 
-	InsertUser(client)
+	id := InsertUser(client)
 	GetAllUsers(client)
+	GetUserById(client, id)
 }
 
-func InsertUser(client *mongo.Client) {
+func InsertUser(client *mongo.Client) string {
 	collection := client.Database("golang").Collection("users")
 	user := bson.D{
 		{"name", "John Doe"},
@@ -41,6 +44,11 @@ func InsertUser(client *mongo.Client) {
 	}
 
 	fmt.Println("Inserted user with ID:", result.InsertedID)
+	if objectID, ok := result.InsertedID.(primitive.ObjectID); ok {
+		return objectID.Hex()
+	}
+
+	return ""
 }
 
 func GetAllUsers(client *mongo.Client) {
@@ -57,4 +65,19 @@ func GetAllUsers(client *mongo.Client) {
 		}
 		fmt.Printf("User: %+v\n", user["name"])
 	}
+}
+
+func GetUserById(client *mongo.Client, id string) {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Fatal("ID inválido:", err)
+	}
+	collection := client.Database("golang").Collection("users")
+	filter := bson.D{{"_id", objectID}}
+	var user bson.M
+	err = collection.FindOne(context.TODO(), filter).Decode(&user)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("User Found: %+v\n", user["name"])
 }
